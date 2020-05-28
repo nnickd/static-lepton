@@ -6,12 +6,23 @@ let space;
 let spaceX;
 let spaceY;
 
+let slider_nodes;
+let slider_radius;
+
+let sliders = {
+    nodes: null,
+    radius: null
+};
+
 function setup() {
-    shapes = 6;
-    nodes = 3;
+    shapes = 0;
+    nodes = 0;
     spaceX = windowWidth;
     spaceY = windowHeight;
     createCanvas(spaceX, spaceY);
+
+    sliders.nodes = new Slider({min: 3, max: 100, posX: 10, posY: 10, width: 80, text: ' nodes', color: [0, 102, 153]});
+    sliders.radius = new Slider({min: 10, max: 100, posX: 10, posY: 40, width: 80, text: ' radius', color: [0, 102, 153]});
 
     space = new Space(shapes, nodes, spaceX, spaceY)
 
@@ -20,14 +31,54 @@ function setup() {
 }
 
 function draw() {
-    // fill(0, 100);
-    // rect(0, 0, width, height);
     background(27);
+
+    for (let key in sliders) {
+        sliders[key].draw();
+    }
+
     space.tick();
 }
 
 function mousePressed() {
-    space.addShapes(1, 30, mouseX, mouseY);
+
+    if (mouseX > 100) {
+        space.addShapes(1, sliders.nodes.value(), mouseX, mouseY, sliders.radius.value());
+    }
+}
+
+
+function Slider(
+    ops = {
+        min: 1,
+        max: 100,
+        default: null,
+        step: 1,
+        posX: 10,
+        posY: 10,
+        width: 80,
+        text: '',
+        color: [0, 102, 153]
+    }
+) {
+    ops.default = ops.default || Math.floor((ops.min + ops.max) / 2);
+    this.slider = createSlider(ops.min, ops.max, ops.default, ops.step);
+    this.slider.position(ops.posX, ops.posY);
+    this.slider.style('width', `${ops.width}px`);
+
+    this.ops = ops;
+}
+
+Slider.prototype.value = function () {
+    return this.slider.value();
+}
+
+Slider.prototype.draw = function () {
+    push()
+    textSize(30);
+    fill(this.ops.color[0], this.ops.color[1], this.ops.color[2]);
+    text(`${this.slider.value()}${this.ops.text}`, this.ops.posX + this.ops.width + 10, this.ops.posY + 20);
+    pop();
 }
 
 // function mouseDragged() {
@@ -53,14 +104,14 @@ Space.prototype.tick = function () {
     this.time++;
 }
 
-Space.prototype.addShapes = function (shapes = 1, nodes = 6, x = null, y = null) {
+Space.prototype.addShapes = function (shapes = 1, nodes = 6, x = null, y = null, radius = null) {
     for (let i = 0; i < shapes; i++) {
-        let shape = new Shape(this, nodes, x, y);
+        let shape = new Shape(this, nodes, x, y, radius);
         this.shapes.push(shape);
     }
 }
 
-function Shape(space, nodes = 6, x = null, y = null) {
+function Shape(space, nodes = 6, x = null, y = null, radius = null) {
     this.space = space;
     this.nodes = [];
 
@@ -73,7 +124,7 @@ function Shape(space, nodes = 6, x = null, y = null) {
     this.centerX = x || (this.space.x / 2) + random(offset * -1, offset);
     this.centerY = y || (this.space.y / 2) + random(offset * -1, offset);
     this.radius = 45;
-    this.radius = random(45, 100);
+    this.radius = radius || random(45, 100);
     this.rotAngle = -90;
     this.accelX = 0.0;
     this.accelY = 0.0;
@@ -85,8 +136,8 @@ function Shape(space, nodes = 6, x = null, y = null) {
     this.color = shuffle([0, random(0, 255), random(0, 255)]);
 
     this.dir = 1;
-    this.minRadius = random(10, 30);
-    this.maxRadius = random(50, 90);
+    this.minRadius = constrain(random(this.radius - 40, this.radius), 1, this.radius);
+    this.maxRadius = random(this.radius, this.radius + 40);
     this.maxNodes = random(nodes, nodes * 6);
     this.limit = random(40, 100);
 }
@@ -95,14 +146,14 @@ Shape.prototype.tick = function () {
     this.draw();
     this.gravity(10);
     // this.move(this.centerX + random(-300, 300), this.centerY + random(-300, 300));
-    this.move(mouseX, mouseY, 60);
+    this.move(mouseX, mouseY, 6);
 
     this.lerp();
     this.bounds();
 
-    if (this.nodes.length < this.maxNodes) {
-        this.nodes.push(new Node(this.centerX, this.centerY, this.centerX, this.centerY));
-    }
+    // if (this.nodes.length < this.maxNodes) {
+    //     this.nodes.push(new Node(this.centerX, this.centerY, this.centerX, this.centerY));
+    // }
 
     if (this.space.time % 100 == 0) {
         this.pulse(this.minRadius, this.maxRadius);
