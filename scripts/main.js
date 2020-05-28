@@ -20,11 +20,21 @@ function setup() {
 }
 
 function draw() {
-    fill(0, 100);
-    rect(0, 0, width, height);
-
+    // fill(0, 100);
+    // rect(0, 0, width, height);
+    background(27);
     space.tick();
 }
+
+function mousePressed() {
+    space.addShapes(1, 30, mouseX, mouseY);
+}
+
+// function mouseDragged() {
+//     if (space.time % 1000 == 0) {
+//         mousePressed();
+//     }
+// }
 
 function Space(shapes = 1, nodes = 6, x = 100, y = 100) {
     this.shapes = [];
@@ -32,10 +42,7 @@ function Space(shapes = 1, nodes = 6, x = 100, y = 100) {
     this.y = y;
     this.time = 0;
 
-    for (let i = 0; i < shapes; i++) {
-        let shape = new Shape(this, nodes);
-        this.shapes.push(shape);
-    }
+    this.addShapes(shapes, nodes);
 }
 
 Space.prototype.tick = function () {
@@ -46,7 +53,14 @@ Space.prototype.tick = function () {
     this.time++;
 }
 
-function Shape(space, nodes = 6) {
+Space.prototype.addShapes = function (shapes = 1, nodes = 6, x = null, y = null) {
+    for (let i = 0; i < shapes; i++) {
+        let shape = new Shape(this, nodes, x, y);
+        this.shapes.push(shape);
+    }
+}
+
+function Shape(space, nodes = 6, x = null, y = null) {
     this.space = space;
     this.nodes = [];
 
@@ -56,8 +70,8 @@ function Shape(space, nodes = 6) {
     }
 
     let offset = 100;
-    this.centerX = (this.space.x / 2) + random(offset * -1, offset);
-    this.centerY = (this.space.y / 2) + random(offset * -1, offset);
+    this.centerX = x || (this.space.x / 2) + random(offset * -1, offset);
+    this.centerY = y || (this.space.y / 2) + random(offset * -1, offset);
     this.radius = 45;
     this.radius = random(45, 100);
     this.rotAngle = -90;
@@ -68,9 +82,13 @@ function Shape(space, nodes = 6) {
     this.springing = 0.0009;
     this.damping = 0.98;
     this.organicConstant = 1.0;
-    this.color = [random(0, 255), random(0, 255), random(0, 255)];
+    this.color = shuffle([0, random(0, 255), random(0, 255)]);
+
     this.dir = 1;
-    this.limit = 100;
+    this.minRadius = random(10, 30);
+    this.maxRadius = random(50, 90);
+    this.maxNodes = random(nodes, nodes * 6);
+    this.limit = random(40, 100);
 }
 
 Shape.prototype.tick = function () {
@@ -82,14 +100,14 @@ Shape.prototype.tick = function () {
     this.lerp();
     this.bounds();
 
-    if (this.nodes.length < 100) {
+    if (this.nodes.length < this.maxNodes) {
         this.nodes.push(new Node(this.centerX, this.centerY, this.centerX, this.centerY));
     }
 
-    if (this.space.time % 6000 == 0) {
+    if (this.space.time % 100 == 0) {
+        this.pulse(this.minRadius, this.maxRadius);
     }
 
-    // this.pulse(300, 300);
     // this.killNodes();
 }
 
