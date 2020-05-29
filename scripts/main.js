@@ -21,8 +21,8 @@ function setup() {
     spaceY = windowHeight;
     createCanvas(spaceX, spaceY);
 
-    sliders.nodes = new Slider({min: 3, max: 100, posX: 10, posY: 10, width: 80, text: ' nodes', color: [0, 102, 153]});
-    sliders.radius = new Slider({min: 10, max: 100, posX: 10, posY: 40, width: 80, text: ' radius', color: [0, 102, 153]});
+    sliders.nodes = new Slider({min: 3, max: 100, default: 6, posX: 10, posY: 10, width: 80, text: ' nodes', color: [0, 102, 153]});
+    sliders.radius = new Slider({min: 10, max: 100, default: 60, posX: 10, posY: 40, width: 80, text: ' radius', color: [0, 102, 153]});
 
     space = new Space(shapes, nodes, spaceX, spaceY)
 
