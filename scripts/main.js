@@ -93,12 +93,6 @@ Slider.prototype.draw = function () {
     pop();
 }
 
-// function mouseDragged() {
-//     if (space.time % 1000 == 0) {
-//         mousePressed();
-//     }
-// }
-
 function Space(shapes = 1, nodes = 6, x = 100, y = 100) {
     this.shapes = [];
     this.x = x;
@@ -133,15 +127,13 @@ function Shape(space, nodes = 6, x = null, y = null, radius = null) {
     }
 
     let offset = 100;
-    this.centerX = x || (this.space.x / 2) + random(offset * -1, offset);
-    this.centerY = y || (this.space.y / 2) + random(offset * -1, offset);
-    this.radius = 45;
+    this.center = createVector(x || (this.space.x / 2) + random(offset * -1, offset), y || (this.space.y / 2) + random(offset * -1, offset))
+    this.velocity = createVector(0.0, 0.0)
+    this.acceleration = createVector(0.0, 0.0);
+
     this.radius = radius || random(45, 100);
     this.rotAngle = -90;
-    this.accelX = 0.0;
-    this.accelY = 0.0;
-    this.deltaX = 0.0;
-    this.deltaY = 0.0;
+    
     this.springing = 0.0009;
     this.damping = 0.98;
     this.organicConstant = 1.0;
@@ -157,15 +149,10 @@ function Shape(space, nodes = 6, x = null, y = null, radius = null) {
 Shape.prototype.tick = function () {
     this.draw();
     this.gravity(sliders.gravity.value());
-    // this.move(this.centerX + random(-300, 300), this.centerY + random(-300, 300));
     this.move(mouseX, mouseY, sliders.mouse.value());
 
     this.lerp();
     this.bounds();
-
-    // if (this.nodes.length < this.maxNodes) {
-    //     this.nodes.push(new Node(this.centerX, this.centerY, this.centerX, this.centerY));
-    // }
 
     if (this.space.time % 100 == 0) {
         this.pulse(this.minRadius, this.maxRadius);
@@ -178,8 +165,7 @@ Shape.prototype.draw = function () {
     //  calculate node  starting locations
     for (let i = 0; i < this.nodes.length; i++) {
         let node = this.nodes[i];
-        node.nodeStartX = this.centerX + cos(radians(this.rotAngle)) * this.radius;
-        node.nodeStartY = this.centerY + sin(radians(this.rotAngle)) * this.radius;
+        node.origin = createVector(this.center.x + cos(radians(this.rotAngle)) * this.radius, this.center.y + sin(radians(this.rotAngle)) * this.radius)
         this.rotAngle += 360.0 / this.nodes.length;
     }
 
@@ -189,61 +175,50 @@ Shape.prototype.draw = function () {
     beginShape();
     for (let i = 0; i < this.nodes.length; i++) {
         let node = this.nodes[i];
-        curveVertex(node.nodeX, node.nodeY);
+        curveVertex(node.xy.x, node.xy.y);
     }
     for (let i = 0; i < this.nodes.length - 1; i++) {
         let node = this.nodes[i];
-        curveVertex(node.nodeX, node.nodeY);
+        curveVertex(node.xy.x, node.xy.y);
     }
     endShape(CLOSE);
 }
 
 Shape.prototype.lerp = function () {
-    this.deltaX += this.accelX;
-    this.deltaY += this.accelY;
+    this.velocity.add(this.acceleration);
     this.limit = sliders.speedLimit.value();
-    if (this.deltaX > this.limit) {
-        this.deltaX = this.limit;
+    if (this.velocity.x > this.limit) {
+        this.velocity.x = this.limit;
     }
-    if (this.deltaY > this.limit) {
-        this.deltaY = this.limit;
+    if (this.velocity.y > this.limit) {
+        this.velocity.y = this.limit;
     }
-    this.centerX += this.deltaX;
-    this.centerY += this.deltaY;
-    this.accelX = 0;
-    this.accelY = 0;
+    this.center.add(this.velocity);
+    this.acceleration.mult(0);
 }
 
 Shape.prototype.force = function (x, y) {
     let mass = this.nodes.length * this.radius * 0.001;
-    this.accelX += (x / mass);
-    this.accelY += (y / mass)
+    this.acceleration.add(createVector(x / mass, y / mass));
 }
 
 Shape.prototype.move = function (x, y, scale = 1) {
-    //move center point
-    let deltaX = x - this.centerX;
-    let deltaY = y - this.centerY;
+    let delta = createVector(x - this.center.x, y - this.center.y)
 
     // create springing effect
-    deltaX *= this.springing;
-    deltaY *= this.springing;
-    // this.accelX += deltaX * scale;
-    // this.accelY += deltaY * scale;
-    this.force(deltaX * scale, deltaY * scale)
+    delta.mult(this.springing);
+    this.force(delta.x * scale, delta.y * scale)
 
     // slow down springing
-    this.accelX *= this.damping;
-    this.accelY *= this.damping;
+    this.acceleration.mult(this.damping);
 
     // change curve tightness
-    this.organicConstant = 1 - ((abs(this.accelX) + abs(this.accelY)) * 0.1);
+    this.organicConstant = 1 - ((abs(this.acceleration.x) + abs(this.acceleration.y)) * 0.1);
 
     //move nodes
     for (let i = 0; i < this.nodes.length; i++) {
         let node = this.nodes[i];
-        node.nodeX = node.nodeStartX + sin(radians(node.angle)) * (this.accelX * 2);
-        node.nodeY = node.nodeStartY + sin(radians(node.angle)) * (this.accelY * 2);
+        node.xy = node.origin.copy().add(createVector(sin(radians(node.angle)) * (this.acceleration.x * 2)), sin(radians(node.angle)) * (this.acceleration.y * 2))
         node.angle += node.frequency;
     }
 }
@@ -252,24 +227,24 @@ Shape.prototype.gravity = function (scale = 1) {
     for (let i = 0; i < this.space.shapes.length; i++) {
         let shape = this.space.shapes[i];
         if (this != shape) {
-            this.move(shape.centerX, shape.centerY, scale);
+            this.move(shape.center.x, shape.center.y, scale);
         }
     }
 }
 
 Shape.prototype.bounds = function () {
-    if (this.centerX + this.deltaX > this.space.x) {
-        this.deltaX *= -1;
+    if (this.center.x + this.velocity.x > this.space.x) {
+        this.velocity.x *= -1;
     }
-    else if (this.centerX + this.deltaX < 0) {
-        this.deltaX *= -1;
+    else if (this.center.x + this.velocity.x < 0) {
+        this.velocity.x *= -1;
     }
 
-    if (this.centerY + this.deltaY > this.space.y) {
-        this.deltaY *= -1;
+    if (this.center.y + this.velocity.y > this.space.y) {
+        this.velocity.y *= -1;
     }
-    else if (this.centerY + this.deltaY < 0) {
-        this.deltaY *= -1;
+    else if (this.center.y + this.velocity.y < 0) {
+        this.velocity.y *= -1;
     }
 }
 
@@ -293,10 +268,8 @@ Shape.prototype.pulse = function (min = 250, max = 300) {
 }
 
 function Node(nodeStartX = 0, nodeStartY = 0, nodeX = 0, nodeY = 0, angle = 0, frequency = random(5, 12)) {
-    this.nodeStartX = nodeStartX;
-    this.nodeStartY = nodeStartY;
-    this.nodeX = nodeX;
-    this.nodeY = nodeY;
+    this.origin = createVector(nodeStartX, nodeStartY);
+    this.xy = createVector(nodeX, nodeY);
     this.angle = angle;
     this.frequency = frequency;
 
