@@ -9,6 +9,7 @@ let sliders = {
     nodes: null,
     radius: null,
     gravity: null,
+    mouse: null,
     speedLimit: null
 };
 
@@ -19,10 +20,11 @@ function setup() {
     spaceY = windowHeight;
     createCanvas(spaceX, spaceY);
 
-    sliders.nodes = new Slider({min: 3, max: 100, default: 6, posX: 10, posY: 10, width: 80, text: ' nodes', color: [0, 102, 153]});
-    sliders.radius = new Slider({min: 10, max: 100, default: 60, posX: 10, posY: 40, width: 80, text: ' radius', color: [0, 102, 153]});
-    sliders.gravity = new Slider({min: 1, max: 30, default: 1, posX: 10, posY: 70, width: 80, text: ' gravity', color: [0, 102, 153], step: 0.01});
-    sliders.speedLimit = new Slider({min: 1, max: 100, default: 4, posX: 10, posY: 100, width: 80, text: ' speed limit', color: [0, 102, 153]});
+    sliders.nodes = new Slider({min: 3, max: 100, default: 6, posX: 10, posY: 10, width: 80, text: ' sides', color: [0, 102, 153]});
+    sliders.radius = new Slider({min: 1, max: 100, default: 60, posX: 10, posY: 40, width: 80, text: 'px radius', color: [0, 102, 153]});
+    sliders.gravity = new Slider({min: 1, max: 30, default: 1, posX: 10, posY: 70, width: 80, text: ' shape gravity', color: [0, 102, 153], step: 0.01});
+    sliders.mouse = new Slider({min: 1, max: 100, default: 1, posX: 10, posY: 100, width: 80, text: ' mouse gravity', color: [0, 102, 153], step: 0.01});
+    sliders.speedLimit = new Slider({min: 1, max: 30, default: 4, posX: 10, posY: 130, width: 80, text: ' speed limit', color: [0, 102, 153]});
 
     space = new Space(shapes, nodes, spaceX, spaceY)
 
@@ -38,8 +40,9 @@ function draw() {
     }
 
     if (sliders.nodes.value() == 3 && 
-        sliders.radius.value() == 10 &&
+        sliders.radius.value() == 1 &&
         sliders.gravity.value() == 1 &&
+        sliders.mouse.value() == 1 &&
         sliders.speedLimit.value() == 1 && 
         space.shapes.length > 0
         ) {
@@ -155,7 +158,7 @@ Shape.prototype.tick = function () {
     this.draw();
     this.gravity(sliders.gravity.value());
     // this.move(this.centerX + random(-300, 300), this.centerY + random(-300, 300));
-    // this.move(mouseX, mouseY, sliders.gravity.value());
+    this.move(mouseX, mouseY, sliders.mouse.value());
 
     this.lerp();
     this.bounds();
